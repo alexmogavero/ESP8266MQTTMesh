@@ -16,6 +16,8 @@
 
 #include <Arduino.h>
 
+#include <Preferences.h>
+
 #ifdef ESP32
   #include <AsyncTCP.h>
   #include <Ticker.h>
@@ -126,6 +128,9 @@ private:
     const char   *outTopic;
     
     char availableTopic[64];
+    
+    Preferences preferences;
+    
 #if HAS_OTA
     uint32_t freeSpaceStart;
     uint32_t freeSpaceEnd;

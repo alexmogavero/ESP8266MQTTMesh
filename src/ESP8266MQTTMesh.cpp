@@ -697,6 +697,12 @@ void ESP8266MQTTMesh::send_connected_msg() {
 #endif
     }
     
+    preferences.begin("ESP8266MQTTMesh", false);
+    String message = preferences.getString("wifi", "");
+    preferences.remove("wifi");
+    preferences.end();
+    publish("info/reset_message", message.c_str(), MSG_TYPE_RETAIN_QOS_0);
+    
     publish("info/MAC", String(WiFi.macAddress()).c_str(), MSG_TYPE_RETAIN_QOS_0);
     publish("info/MAC_hosted_AP", String(WiFi.softAPmacAddress()).c_str(), MSG_TYPE_RETAIN_QOS_0);
     publish("info/IP_local", WiFi.localIP().toString().c_str(), MSG_TYPE_RETAIN_QOS_0);
@@ -1080,7 +1086,16 @@ void ESP8266MQTTMesh::onWifiDisconnect(const WiFiEventStationModeDisconnected& e
     if (! connectScheduled) {
         schedule_connect(2.0);
     }
-    dbgPrintln(EMMDBG_WIFI, "Disconnected from Wi-Fi: " + event.ssid + " because: " + String(event.reason));
+    String message = "Disconnected from Wi-Fi: " + event.ssid
+        + " because: " + String(event.reason);
+    
+    dbgPrintln(EMMDBG_WIFI, message);
+    
+    dbgPrintln(EMMDBG_WIFI, "storing disconnected message into permanent memory");
+    preferences.begin("ESP8266MQTTMesh", false);
+    preferences.putString("wifi", message);
+    preferences.end();
+    
     if (alreaddyDisconnected){ //prevent the Function to fire multiple times on a single Disconnect
         return;
     }
