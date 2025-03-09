@@ -152,6 +152,9 @@ private:
     unsigned short mqtt_attempt=0;
 
     Ticker schedule;
+    
+    Ticker watchdog; // scheduler for watchdog execution
+    bool prev_connected = true; // store status of connection at previous watchdog execution
 
     bool connectScheduled = false;
     bool alreaddyDisconnected = false;
@@ -194,6 +197,7 @@ private:
     void schedule_connect(float delay = 5.0);
     void connect_mqtt();
     void connect_mqtt_i();
+    void connection_watchdog(); //watchdog callback to check connection status
     void shutdown_AP();
     void setup_AP();
     void handle_client_data(int idx, char *data);

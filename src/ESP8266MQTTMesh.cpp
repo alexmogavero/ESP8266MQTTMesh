@@ -161,6 +161,10 @@ void ESP8266MQTTMesh::begin() {
     //char macstr[18];
     //sprintf(macstr,"%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     //dbgPrintln(EMMDBG_MSG, "Changing MAC address to: " + String(macstr));
+    
+    // starting the watchdog for connection stability
+    watchdog.attach(600, std::bind(&ESP8266MQTTMesh::connection_watchdog, this));
+    
     do_blink = true;
     
     WiFi.disconnect();
@@ -385,6 +389,23 @@ bool ESP8266MQTTMesh::verify_bssid(uint8_t *bssid) {
 bool ESP8266MQTTMesh::connected() {
     delay(0); // let the Interrupts execute
     return wifiConnected() && ((meshConnect && espClient[0] && espClient[0]->connected() && p2pConnected) || mqttClient.connected());
+}
+
+void ESP8266MQTTMesh::connection_watchdog() {
+    dbgPrintln(EMMDBG_WIFI, "Watchdog checking connection");
+    
+    if ( (! connected()) && (! prev_connected) ) {
+        dbgPrintln(EMMDBG_WIFI, "Connection is absent for long time, trying to reboot.");
+        
+        dbgPrintln(EMMDBG_WIFI, "storing disconnected message into permanent memory");
+        preferences.begin("ESP8266MQTTMesh", false);
+        preferences.putString("wifi", "Connection is absent for long time, trying to reboot.");
+        preferences.end();
+        
+        die();
+    }
+    
+    prev_connected = connected();
 }
 
 void ESP8266MQTTMesh::scan() {
