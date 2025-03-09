@@ -24,6 +24,8 @@
 #include <limits.h>
 #include <string>
 
+#include <functional>
+
 #if HAS_OTA
 extern "C" {
   #include "eboot_command.h"
@@ -612,10 +614,34 @@ void ESP8266MQTTMesh::HandleMessages(const char *topic, const char *msg) {
   }
 }
 
+void ESP8266MQTTMesh::connect_mqtt_i() {
+    if (mqttClient.connected()) {
+        dbgPrintln(EMMDBG_MQTT, "MQTT already connected");
+        mqtt_schedule.detach();
+    }
+    mqttClient.disconnect(true);
+    
+    mqttClient.connect();
+    
+    mqtt_attempt ++;
+    
+    dbgPrintln(EMMDBG_MQTT, "Attempting MQTT connection (" + String(mqtt_server) + ":" + String(mqtt_port) + ")..." + String(mqtt_attempt));
+    
+    if (mqtt_attempt > 5){
+        mqtt_schedule.detach();
+        mqtt_attempt = 0;
+        
+        //start again
+        WiFi.disconnect();
+        connect();
+    }
+}
+
 void ESP8266MQTTMesh::connect_mqtt() {
     dbgPrintln(EMMDBG_MQTT, "Attempting MQTT connection (" + String(mqtt_server) + ":" + String(mqtt_port) + ")...");
-    // Attempt to connect
-    mqttClient.connect();
+    
+    // Attempt to connect every 5s
+    mqtt_schedule.attach(5.0, std::bind(&ESP8266MQTTMesh::connect_mqtt_i, this));
 }
 
 
@@ -1141,12 +1167,16 @@ void ESP8266MQTTMesh::onMqttConnect(bool sessionPresent) {
     publish(outTopic, "", "connect", msg, MSG_TYPE_NONE);
      */
     // ... and resubscribe
+    
+    mqtt_schedule.detach();
+    
     char subscribe[TOPIC_LEN];
     strlcpy(subscribe, inTopic, sizeof(subscribe));
     strlcat(subscribe, "#", sizeof(subscribe));
     mqttClient.subscribe(subscribe, 0);
 
     send_connected_msg();
+    
     setup_AP();
     wasConnected = true;
 }

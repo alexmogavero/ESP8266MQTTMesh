@@ -146,7 +146,10 @@ private:
     AsyncServer     espServer;
     AsyncClient     *espClient[ESP8266_NUM_CLIENTS+1] = {0}; //TODO: test if this does what I hope it does!
     uint8_t         espMAC[ESP8266_NUM_CLIENTS+1][6];
+    
     AsyncMqttClient mqttClient;
+    Ticker mqtt_schedule;
+    unsigned short mqtt_attempt=0;
 
     Ticker schedule;
 
@@ -190,6 +193,7 @@ private:
     const char *build_mesh_ssid(char buf[32], uint8_t *mac);
     void schedule_connect(float delay = 5.0);
     void connect_mqtt();
+    void connect_mqtt_i();
     void shutdown_AP();
     void setup_AP();
     void handle_client_data(int idx, char *data);
